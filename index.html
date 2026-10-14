@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="theme-color" content="#0f172a">
+<title>Vehicle Saver | Raghogarh Polytechnic Live IoT Tracking</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- LOGIN SCREEN - ULTRA MODERN GOOGLE/INSTAGRAM STYLE -->
+<section id="loginScreen">
+  <div class="login-art">
+    <div class="brand">
+      <div class="brand-mark"><img src="weblogo_i.jpeg" width="28" height="28" style="border-radius: 8px;"></div>
+      <span>VehicleSaver</span>
+    </div>
+    <div>
+      <div class="eyebrow" style="color:#60a5fa">RAGHOGARH POLYTECHNIC COLLEGE | IOT SAFETY</div>
+      <h1>Smart Live Tracking & Accident Detection System.</h1>
+      <p>Experience lightning-fast multi-vehicle tracking, exact GPS map location, and instant MPU6050 safety alerts.</p>
+      <div class="art-points">
+        <div class="art-point"><span class="tick">✓</span> Exact GPS Live Map (Raghogarh Polytechnic Zone)</div>
+        <div class="art-point"><span class="tick">✓</span> Instant MPU6050 Tilt & Buzzer Accident Alerts</div>
+        <div class="art-point"><span class="tick">✓</span> Ultra-smooth Google/Instagram inspired modern UI</div>
+      </div>
+    </div>
+    <div class="art-footer">Every Mile Protected · Real-Time IoT Intelligence.</div>
+  </div>
+  <div class="login-side">
+    <div class="login-box">
+      <div class="eyebrow">SECURE LOGIN</div>
+      <h2>Welcome Back</h2>
+      <p class="intro">Sign in to access your live monitoring dashboard.</p>
+      <form id="loginForm">
+        <label for="userId">User ID</label>
+        <input id="userId" autocomplete="username" placeholder="e.g. admin, owner, police" required>
+        <label for="loginPassword">Password</label>
+        <input id="loginPassword" type="password" autocomplete="current-password" placeholder="Enter password" required>
+        <button class="btn btn-primary btn-block" type="submit">Open Dashboard &nbsp;→</button>
+        <div id="loginError" class="error hidden"></div>
+      </form>
+      <div class="demo-box">
+        <strong>Quick Demo Access:</strong><br>
+        • Admin: <code>admin</code> / <code>admin123</code><br>
+        • Owner: <code>owner</code> / <code>owner123</code><br>
+        • Control Room: <code>police</code> / <code>police123</code>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- MAIN APP DASHBOARD -->
+<section id="app" class="hidden">
+  <header class="topbar">
+    <div style="display:flex;align-items:center;gap:12px">
+      <button class="hamburger" id="menuToggle" aria-label="Open menu">☰</button>
+      <div class="brand">
+        <div class="brand-mark">🚌</div>
+        <span>VehicleSaver</span>
+      </div>
+    </div>
+    <div class="top-right">
+      <button class="btn btn-speed-test" id="testSpeedBtn" type="button" title="Test Overspeeding">⚡ Test Speed</button>
+      <button class="btn btn-sos-test" id="testSOSBtn" type="button" title="Test MPU6050 SOS">🚨 Test SOS</button>
+      <div class="user-chip">
+        <div class="avatar" id="avatarLetter">A</div>
+        <span id="topUserName">Admin</span>
+        <span class="role-tag" id="topRole">Admin</span>
+      </div>
+      <button class="logout" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+
+  <!-- Global SOS Accident Banner -->
+  <section id="globalSOSBanner" class="global-sos-banner hidden" role="alert" aria-live="assertive">
+    <div class="global-sos-copy">
+      <strong>🚨 CRITICAL: ACCIDENT / ROLLOVER DETECTED (MPU6050)</strong>
+      <span id="globalSOSMessage">Impact detected from hardware unit. Buzzer active.</span>
+    </div>
+    <div class="global-sos-actions">
+      <button class="btn btn-sos-open" id="openSOSAlertsBtn" type="button">View Alerts</button>
+      <button class="btn btn-sos-ack" id="acknowledgeSOSBtn" type="button">Acknowledge</button>
+    </div>
+  </section>
+
+  <!-- Global Overspeeding Warning Banner -->
+  <section id="globalOverspeedBanner" class="global-overspeed-banner hidden" role="alert" aria-live="assertive">
+    <div class="global-sos-copy">
+      <strong>⚠️ WARNING: OVERSPEEDING DETECTED!</strong>
+      <span id="globalOverspeedMessage">Vehicle speed exceeded safety limit.</span>
+    </div>
+    <div class="global-sos-actions">
+      <button class="btn btn-sos-ack" id="acknowledgeOverspeedBtn" type="button">Dismiss</button>
+    </div>
+  </section>
+
+  <div class="app-layout">
+    <aside class="sidebar" id="sidebar">
+      <div class="side-label">NAVIGATION</div>
+      <button class="nav-btn active" data-page="dashboard"><span class="nav-icon">📊</span>Dashboard</button>
+      <button class="nav-btn" data-page="vehicles"><span class="nav-icon">🚌</span>Vehicles</button>
+      <button class="nav-btn" data-page="alerts"><span class="nav-icon">🚨</span>Safety Alerts</button>
+      <button class="nav-btn" data-page="history"><span class="nav-icon">📋</span>History</button>
+      <button class="nav-btn" data-page="about"><span class="nav-icon">⚙️</span>Settings & Info</button>
+    </aside>
+    <div class="overlay" id="overlay"></div>
+
+    <main>
+      <!-- DASHBOARD PAGE -->
+      <section class="page active" id="page-dashboard">
+        <div class="page-head">
+          <div>
+            <h1>Live Tracking Dashboard</h1>
+            <p>Real-time telemetry from ESP32, NEO-6M GPS, and MPU6050 sensors.</p>
+          </div>
+          <div class="demo-pill"><span class="dot"></span> FIREBASE LIVE SYNC ACTIVE</div>
+        </div>
+
+        <div class="panel" style="margin-bottom:20px">
+          <div class="panel-head" style="align-items:center;margin-bottom:0">
+            <div>
+              <h3>Active Vehicle Fleet</h3>
+              <p>Select a vehicle unit to inspect live tracking parameters.</p>
+            </div>
+            <select id="vehicleSelect" class="vehicle-select" aria-label="Select vehicle"></select>
+          </div>
+        </div>
+
+        <div class="cards">
+          <div class="stat-card">
+            <div class="stat-top"><span>Connection Status</span><span class="stat-icon">◉</span></div>
+            <div class="stat-value" style="font-size:22px" id="connectionValue">Connecting...</div>
+            <div class="stat-foot" id="connectionFoot">Firebase Realtime DB</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-top"><span>Current Speed</span><span class="stat-icon">↗</span></div>
+            <div class="stat-value"><span id="speedValue">0</span><small style="font-size:14px"> km/h</small></div>
+            <div class="stat-foot" id="speedStatusFoot">Normal speed range</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-top"><span>Speed Limit</span><span class="stat-icon">◷</span></div>
+            <div class="stat-value"><span id="limitValue">10</span><small style="font-size:14px"> km/h</small></div>
+            <div class="stat-foot">Safety threshold</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-top"><span>Safety Events</span><span class="stat-icon">⚠</span></div>
+            <div class="stat-value" id="alertCount">0</div>
+            <div class="stat-foot">Recorded incidents</div>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>Live GPS Location Map</h3>
+                <p id="mapVehicleLabel">Raghogarh Polytechnic College Zone</p>
+              </div>
+              <span class="pill green">EXACT GPS</span>
+            </div>
+            <div id="map"></div>
+            <div class="map-note">Map automatically tracks latitude and longitude sent by ESP32 around Raghogarh Polytechnic College.</div>
+          </div>
+          <div class="panel">
+            <div class="panel-head">
+              <div>
+                <h3>Hardware Diagnostics</h3>
+                <p>ESP32, MPU6050 & Buzzer status</p>
+              </div>
+            </div>
+            <div class="info-rows">
+              <div class="info-row"><span>Vehicle Name</span><strong id="detailName">—</strong></div>
+              <div class="info-row"><span>Device ID</span><strong id="detailNumber">—</strong></div>
+              <div class="info-row"><span>Driver</span><strong id="detailDriver">—</strong></div>
+              <div class="info-row"><span>Latitude</span><strong id="detailLat">24.4452</strong></div>
+              <div class="info-row"><span>Longitude</span><strong id="detailLng">77.2134</strong></div>
+              <div class="info-row"><span>MPU6050 Sensor</span><strong id="sensorState" class="status-demo">Waiting</strong></div>
+              <div class="info-row"><span>Buzzer Alert</span><strong id="buzzerState">OFF</strong></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="panel">
+          <div class="panel-head">
+            <div>
+              <h3>Latest Safety Alerts</h3>
+              <p>Real-time overspeeding and accident logs</p>
+            </div>
+            <button class="btn btn-light" data-goto="alerts">View all alerts →</button>
+          </div>
+          <div id="latestAlerts" class="alert-list"></div>
+        </div>
+      </section>
+
+      <!-- VEHICLES PAGE -->
+      <section class="page" id="page-vehicles">
+        <div class="page-head">
+          <div>
+            <h1>Registered Vehicles</h1>
+            <p>Manage and track all active hardware units.</p>
+          </div>
+          <button class="btn btn-primary" id="addVehicleShortcut">+ Add Vehicle</button>
+        </div>
+        <div id="vehicleCards" class="vehicle-grid"></div>
+        <div id="noVehicles" class="empty hidden">No vehicles registered yet.</div>
+      </section>
+
+      <!-- SAFETY ALERTS PAGE -->
+      <section class="page" id="page-alerts">
+        <div class="page-head">
+          <div>
+            <h1>Safety Alerts & SOS Logs</h1>
+            <p>Overspeeding warnings, harsh braking, and MPU6050 impact triggers.</p>
+          </div>
+          <span class="pill red" id="alertsTotal">0 EVENTS</span>
+        </div>
+        <div class="search-row">
+          <input id="alertSearch" type="search" placeholder="Search safety events...">
+          <button class="btn btn-light" id="clearSearch">Clear</button>
+        </div>
+        <div id="alertsList" class="alert-list"></div>
+        <div id="noAlerts" class="empty hidden">No matching safety alerts found.</div>
+      </section>
+
+      <!-- HISTORY PAGE -->
+      <section class="page" id="page-history">
+        <div class="page-head">
+          <div>
+            <h1>Telemetry History</h1>
+            <p>Detailed historical logs of speed, coordinates, and events.</p>
+          </div>
+          <span class="pill" id="historyTotal">0 RECORDS</span>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Time</th>
+                <th>Vehicle</th>
+                <th>Speed</th>
+                <th>Limit</th>
+                <th>Event / Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="historyBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- SETTINGS & INFO PAGE -->
+      <section class="page" id="page-about">
+        <div class="page-head">
+          <div>
+            <h1>Settings & Configuration</h1>
+            <p>Manage your user profile and register new hardware units.</p>
+          </div>
+        </div>
+        <div class="two-col">
+          <div class="panel form-panel">
+            <h3>User Profile</h3>
+            <p>Update your display name and security credentials.</p>
+            <form id="profileForm">
+              <label for="profileName">Your Name</label>
+              <input id="profileName" required maxlength="60">
+              <label for="currentPassword">Current Password</label>
+              <input id="currentPassword" type="password" required>
+              <label for="newPassword">New Password (optional)</label>
+              <input id="newPassword" type="password" minlength="6">
+              <label for="confirmPassword">Confirm Password</label>
+              <input id="confirmPassword" type="password">
+              <div class="form-actions"><button class="btn btn-primary" type="submit">Save Profile</button></div>
+              <div id="profileMessage" class="message"></div>
+            </form>
+          </div>
+          <div class="panel form-panel" id="vehicleFormPanel">
+            <h3>Register New Hardware Unit</h3>
+            <p>Add a new ESP32 vehicle ID to sync with Firebase.</p>
+            <form id="addVehicleForm">
+              <div class="form-grid">
+                <div class="full"><label for="newVehicleName">Vehicle Name</label><input id="newVehicleName" required placeholder="e.g. Polytechnic Bus"></div>
+                <div class="full"><label for="newVehicleNumber">Firebase Node ID / Number</label><input id="newVehicleNumber" required placeholder="e.g. vehicle_02"></div>
+                <div class="full"><label for="newDriverName">Driver Name</label><input id="newDriverName" placeholder="Driver Name"></div>
+              </div>
+              <div class="form-actions"><button class="btn btn-primary" type="submit">+ Add Vehicle</button></div>
+              <div id="vehicleMessage" class="message"></div>
+            </form>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+</section>
+
+<!-- Firebase SDKs -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+<!-- Leaflet Map & Main App Logic -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="script.js"></script>
+</body>
+</html>
